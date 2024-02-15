@@ -162,7 +162,6 @@ var staticAssets embed.FS
 func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	logging.SuppressDefaultLogging()
 	logger, err := logging.NewStructuredLoggerFromLevel(userConfig.ToLogLevel())
-
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +213,6 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	}
 
 	statsScope, statsReporter, closer, err := metrics.NewScope(globalCfg.Metrics, logger, userConfig.StatsNamespace)
-
 	if err != nil {
 		return nil, errors.Wrapf(err, "instantiating metrics scope")
 	}
@@ -305,6 +303,10 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "getting home dir to write ~/.git-credentials file")
 	}
+	logger.Info("found home dir", "path", home)
+
+	envHome := os.Getenv("HOME")
+	logger.Info("HOME env var value", "HOME", envHome)
 
 	if userConfig.WriteGitCreds {
 		if userConfig.GithubUser != "" {
@@ -360,13 +362,11 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	commitStatusUpdater := &events.DefaultCommitStatusUpdater{Client: vcsClient, StatusName: userConfig.VCSStatusName}
 
 	binDir, err := mkSubDir(userConfig.DataDir, BinDirName)
-
 	if err != nil {
 		return nil, err
 	}
 
 	cacheDir, err := mkSubDir(userConfig.DataDir, TerraformPluginCacheDirName)
-
 	if err != nil {
 		return nil, err
 	}
@@ -606,7 +606,6 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	)
 
 	showStepRunner, err := runtime.NewShowStepRunner(terraformClient, defaultTfVersion)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "initializing show step runner")
 	}
@@ -615,7 +614,6 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		defaultTfVersion,
 		policy.NewConfTestExecutorWorkflow(logger, binDir, &terraform.DefaultDownloader{}),
 	)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "initializing policy check step runner")
 	}
@@ -1077,7 +1075,7 @@ func (s *Server) Index(w http.ResponseWriter, _ *http.Request) {
 		GlobalApplyLockEnabled: applyCmdLock.GlobalApplyLockEnabled,
 		TimeFormatted:          applyCmdLock.Time.Format("02-01-2006 15:04:05"),
 	}
-	//Sort by date - newest to oldest.
+	// Sort by date - newest to oldest.
 	sort.SliceStable(lockResults, func(i, j int) bool { return lockResults[i].Time.After(lockResults[j].Time) })
 
 	err = s.IndexTemplate.Execute(w, templates.IndexData{
@@ -1093,7 +1091,6 @@ func (s *Server) Index(w http.ResponseWriter, _ *http.Request) {
 }
 
 func preparePullToJobMappings(s *Server) []jobs.PullInfoWithJobIDs {
-
 	pullToJobMappings := s.ProjectCmdOutputHandler.GetPullToJobMapping()
 
 	for i := range pullToJobMappings {
@@ -1103,13 +1100,13 @@ func preparePullToJobMappings(s *Server) []jobs.PullInfoWithJobIDs {
 			pullToJobMappings[i].JobIDInfos[j].TimeFormatted = pullToJobMappings[i].JobIDInfos[j].Time.Format("02-01-2006 15:04:05")
 		}
 
-		//Sort by date - newest to oldest.
+		// Sort by date - newest to oldest.
 		sort.SliceStable(pullToJobMappings[i].JobIDInfos, func(x, y int) bool {
 			return pullToJobMappings[i].JobIDInfos[x].Time.After(pullToJobMappings[i].JobIDInfos[y].Time)
 		})
 	}
 
-	//Sort by repository, project, path, workspace then date.
+	// Sort by repository, project, path, workspace then date.
 	sort.SliceStable(pullToJobMappings, func(x, y int) bool {
 		if pullToJobMappings[x].Pull.RepoFullName != pullToJobMappings[y].Pull.RepoFullName {
 			return pullToJobMappings[x].Pull.RepoFullName < pullToJobMappings[y].Pull.RepoFullName
